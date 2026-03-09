@@ -1,0 +1,13 @@
+[
+ {
+  "docstatus": 0,
+  "doctype": "Custom HTML Block",
+  "html": "<div class=\"tools-mgmt\">\n    <div class=\"tools-buttons\">\n        <div class=\"tool-btn\" id=\"btn-issue\">\n            <div class=\"btn-icon\">📤</div>\n            <div class=\"btn-text\">\n                <div class=\"btn-label\">Issue Tools to Employee</div>\n            </div>\n        </div>\n        \n        <div class=\"tool-btn\" id=\"btn-return\">\n            <div class=\"btn-icon\">📥</div>\n            <div class=\"btn-text\">\n                <div class=\"btn-label\">Return Tools from Employee</div>\n            </div>\n        </div>\n    </div>\n</div>",
+  "modified": "2026-03-06 11:59:17.167215",
+  "name": "HSF Tool Management",
+  "private": 0,
+  "roles": [],
+  "script": "root_element.querySelector('#btn-issue').addEventListener('click', function() {\n    frappe.new_doc('Stock Entry').then(() => {\n        frappe.timeout(0.1).then(() => {\n            cur_frm.set_value('stock_entry_type', 'Material Transfer');\n            cur_frm.set_value('from_warehouse', 'Facility Stock  - TDt');\n            cur_frm.set_value('to_warehouse', 'Employee Tools Issue - TDt');\n        });\n    });\n});\n\nroot_element.querySelector('#btn-return').addEventListener('click', function() {\n    frappe.new_doc('Stock Entry').then(() => {\n        frappe.timeout(0.1).then(() => {\n            cur_frm.set_value('stock_entry_type', 'Material Transfer');\n            cur_frm.set_value('from_warehouse', 'Employee Tools Issue - TDt');\n            cur_frm.set_value('to_warehouse', 'Facility Stock  - TDt');\n        });\n    });\n});",
+  "style": ".tools-mgmt {\n    padding: 0;\n}\n\n.tools-mgmt .tools-buttons {\n    display: flex;\n    flex-direction: column;\n    gap: 8px;\n}\n\n.tools-mgmt .tool-btn {\n    display: flex;\n    align-items: center;\n    gap: 12px;\n    padding: 12px 15px;\n    border: 1px solid #e2e2e2;\n    border-radius: 8px;\n    cursor: pointer;\n    transition: all 0.2s ease;\n}\n\n.tools-mgmt .tool-btn:hover {\n    background: #f8f9fa;\n    border-color: #ccc;\n}\n\n.tools-mgmt .btn-icon {\n    font-size: 20px;\n}\n\n.tools-mgmt .btn-label {\n    font-size: 13px;\n    font-weight: 500;\n    color: #333;\n}"
+ }
+]
