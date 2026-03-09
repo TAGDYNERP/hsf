@@ -1,0 +1,46 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-03-09 12:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "request_number"
+ ],
+ "fields": [
+  {
+   "fieldname": "request_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Request Number",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-09 12:00:00",
+ "modified_by": "Administrator",
+ "module": "HSF",
+ "name": "Maintenance Request",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "request_number",
+ "track_changes": 1
+}
