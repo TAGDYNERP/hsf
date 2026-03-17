@@ -15,6 +15,10 @@ fixtures = [
 		"doctype": "Custom HTML Block",
 		"filters": [["name", "in", ["HSF Tool Management"]]],
 	},
+	{
+		"doctype": "Custom Field",
+		"filters": [["module", "=", "HSF"]],
+	},
 ]
 
 # Each item in the list will be shown as an app in the apps page
