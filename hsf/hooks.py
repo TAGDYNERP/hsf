@@ -17,16 +17,15 @@ fixtures = [
 	},
 ]
 
-# Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "hsf",
-# 		"logo": "/assets/hsf/logo.png",
-# 		"title": "HSF",
-# 		"route": "/hsf",
-# 		"has_permission": "hsf.api.permission.has_app_permission"
-# 	}
-# ]
+add_to_apps_screen = [
+	{
+		"name": "hsf",
+		"logo": "/assets/hsf/images/hsf.svg",
+		"title": "HSF",
+		"route": "/app/hsf",
+		"has_permission": "hsf.permissions.has_app_permission",
+	}
+]
 
 # Includes in <head>
 # ------------------

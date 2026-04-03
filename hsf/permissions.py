@@ -24,6 +24,14 @@ def item_has_permission(doc, ptype=None, user=None):
 		return True
 
 	if "HSF User" in frappe.get_roles(user) and "Stock User" not in frappe.get_roles(user):
-		return doc.item_group == "Facilities"
+		return doc.item_group == "Facility Items"
 
 	return True
+
+
+def has_app_permission(user=None):
+	"""Only show HSF app to users with HSF User role."""
+	if not user:
+		user = frappe.session.user
+
+	return "HSF User" in frappe.get_roles(user)
