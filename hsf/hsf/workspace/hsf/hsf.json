@@ -643,5 +643,12 @@
    "doctype": "Workspace Custom Block"
   }
  ],
- "roles": []
+ "roles": [
+  {
+   "role": "HSF User"
+  },
+  {
+   "role": "System Manager"
+  }
+ ]
 }
