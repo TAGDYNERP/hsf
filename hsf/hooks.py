@@ -12,6 +12,10 @@ required_apps = ["erpnext"]
 
 fixtures = [
 	{
+		"doctype": "Role",
+		"filters": [["name", "in", ["HSF User", "HSF Manager"]]],
+	},
+	{
 		"doctype": "Custom HTML Block",
 		"filters": [["name", "in", ["HSF Tool Management"]]],
 	},
