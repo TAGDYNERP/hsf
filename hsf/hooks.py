@@ -98,6 +98,9 @@ add_to_apps_screen = [
 # before_install = "hsf.install.before_install"
 # after_install = "hsf.install.after_install"
 
+# Keep the HSF workspace's Item shortcut filtered to the facility item groups.
+after_migrate = "hsf.install.after_migrate"
+
 # Uninstallation
 # ------------
 
