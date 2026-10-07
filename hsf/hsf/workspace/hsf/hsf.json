@@ -1,7 +1,7 @@
 {
  "app": "hsf",
  "charts": [],
- "content": "[{\"id\":\"hsf_header_1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Tool Management</b></span>\",\"col\":12}},{\"id\":\"hsf_custom_1\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"HSF Tool Management\",\"col\":12}},{\"id\":\"hsf_header_2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Shortcut Cards</b></span>\",\"col\":12}},{\"id\":\"hsf_sc_1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Entry\",\"col\":3}},{\"id\":\"hsf_sc_2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Asset\",\"col\":3}},{\"id\":\"hsf_sc_3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Item\",\"col\":3}},{\"id\":\"hsf_sc_4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Request For Quotation\",\"col\":3}},{\"id\":\"hsf_header_3\",\"type\":\"header\",\"data\":{\"text\":\"<span style=\\\"font-size: 16px;\\\"><b>Masters</b></span>\",\"col\":12}},{\"id\":\"hsf_card_1\",\"type\":\"card\",\"data\":{\"card_name\":\"Buying\",\"col\":4}},{\"id\":\"hsf_card_2\",\"type\":\"card\",\"data\":{\"card_name\":\"Assets\",\"col\":4}},{\"id\":\"hsf_card_3\",\"type\":\"card\",\"data\":{\"card_name\":\"Maintenance\",\"col\":4}}]",
+ "content": "[{\"id\":\"hsf_header_2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Shortcut Cards</b></span>\",\"col\":12}},{\"id\":\"hsf_sc_1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Entry\",\"col\":3}},{\"id\":\"hsf_sc_2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Asset\",\"col\":3}},{\"id\":\"hsf_sc_3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Item\",\"col\":3}},{\"id\":\"hsf_sc_4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Request For Quotation\",\"col\":3}},{\"id\":\"hsf_header_1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Tool Management</b></span>\",\"col\":12}},{\"id\":\"hsf_custom_1\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"HSF Tool Management\",\"col\":2}},{\"id\":\"QVcDDWBt3o\",\"type\":\"quick_list\",\"data\":{\"quick_list_name\":\"Material Request From Main store\",\"col\":4}},{\"id\":\"AgsnWeZKGk\",\"type\":\"quick_list\",\"data\":{\"quick_list_name\":\"Stock Entry \",\"col\":4}},{\"id\":\"hsf_header_3\",\"type\":\"header\",\"data\":{\"text\":\"<span style=\\\"font-size: 16px;\\\"><b>Masters</b></span>\",\"col\":12}},{\"id\":\"hsf_card_1\",\"type\":\"card\",\"data\":{\"card_name\":\"Buying\",\"col\":4}},{\"id\":\"hsf_card_2\",\"type\":\"card\",\"data\":{\"card_name\":\"Assets\",\"col\":4}},{\"id\":\"hsf_card_3\",\"type\":\"card\",\"data\":{\"card_name\":\"Maintenance\",\"col\":4}}]",
  "creation": "2026-03-06 12:00:00",
  "custom_blocks": [
   {
@@ -219,7 +219,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-07-20 13:02:09.842548",
+ "modified": "2026-10-07 13:25:45.816052",
  "modified_by": "Administrator",
  "module": "HSF",
  "name": "HSF",
@@ -227,7 +227,18 @@
  "owner": "Administrator",
  "parent_page": "",
  "public": 1,
- "quick_lists": [],
+ "quick_lists": [
+  {
+   "document_type": "Material Request",
+   "label": "Material Request From Main store",
+   "quick_list_filter": "[[\"Material Request\",\"material_request_type\",\"=\",\"Material Transfer\"]]"
+  },
+  {
+   "document_type": "Stock Entry",
+   "label": "Stock Entry ",
+   "quick_list_filter": "[]"
+  }
+ ],
  "restrict_to_domain": "",
  "roles": [
   {
