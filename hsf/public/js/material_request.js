@@ -35,7 +35,7 @@ const hsf_quick_transfer = {
 			!["Stopped", "Cancelled"].includes(frm.doc.status) &&
 			(frm.doc.items || []).some((row) => flt(row.stock_qty) > flt(row.ordered_qty)) &&
 			frappe.model.can_create("Stock Entry") &&
-			frappe.perm.has_perm("Stock Entry", 0, "submit")
+			frappe.model.can_submit("Stock Entry")
 		);
 	},
 
