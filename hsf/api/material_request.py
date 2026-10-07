@@ -65,6 +65,7 @@ def _row_status(item, flags, available_stock_qty: float) -> str:
 
 def _get_outstanding_rows(material_request):
 	rows = []
+	stock_remaining = {}
 	for item in material_request.items:
 		conversion_factor = flt(item.conversion_factor) or 1
 		outstanding_stock_qty = max(flt(item.stock_qty) - flt(item.ordered_qty), 0)
@@ -77,7 +78,18 @@ def _get_outstanding_rows(material_request):
 		available_qty = available_stock_qty / conversion_factor
 		status = _row_status(item, flags, available_stock_qty)
 		can_quick_transfer = status == _("Available")
-		transfer_qty = min(remaining_qty, max(available_qty, 0)) if can_quick_transfer else 0
+		stock_key = (item.item_code, item.from_warehouse)
+		stock_remaining.setdefault(stock_key, max(available_stock_qty, 0))
+		transfer_qty = (
+			min(remaining_qty, stock_remaining[stock_key] / conversion_factor) if can_quick_transfer else 0
+		)
+		whole_uom = bool(frappe.get_cached_value("UOM", item.uom, "must_be_whole_number"))
+		whole_stock_uom = bool(frappe.get_cached_value("UOM", item.stock_uom, "must_be_whole_number"))
+		if whole_stock_uom:
+			transfer_qty = math.floor(transfer_qty * conversion_factor + 1e-9) / conversion_factor
+		if whole_uom:
+			transfer_qty = math.floor(transfer_qty + 1e-9)
+		stock_remaining[stock_key] -= transfer_qty * conversion_factor
 
 		rows.append(
 			frappe._dict(
@@ -95,6 +107,9 @@ def _get_outstanding_rows(material_request):
 					"uom": item.uom,
 					"stock_uom": item.stock_uom,
 					"conversion_factor": conversion_factor,
+					"expected_ordered_qty": flt(item.ordered_qty),
+					"whole_uom": whole_uom,
+					"whole_stock_uom": whole_stock_uom,
 					"status": status,
 					"can_quick_transfer": can_quick_transfer,
 				}
@@ -144,6 +159,7 @@ def _validate_selection(material_request, selected: dict[str, float]):
 	if unknown_items:
 		frappe.throw(_("One or more selected items do not belong to this Material Request."))
 
+	stock_remaining = {}
 	for item_name, qty in selected.items():
 		item = items_by_name[item_name]
 		conversion_factor = flt(item.conversion_factor) or 1
@@ -158,7 +174,10 @@ def _validate_selection(material_request, selected: dict[str, float]):
 			)
 
 		flags = _item_flags(item.item_code)
-		available_stock_qty = _availability(item.item_code, item.from_warehouse)
+		stock_key = (item.item_code, item.from_warehouse)
+		if stock_key not in stock_remaining:
+			stock_remaining[stock_key] = _availability(item.item_code, item.from_warehouse)
+		available_stock_qty = stock_remaining[stock_key]
 		status = _row_status(item, flags, available_stock_qty)
 		if status != _("Available"):
 			frappe.throw(_("{0}: {1}").format(item.item_code, status))
@@ -172,6 +191,23 @@ def _validate_selection(material_request, selected: dict[str, float]):
 					qty,
 				)
 			)
+		stock_remaining[stock_key] -= requested_stock_qty
+
+
+def _validate_snapshot(material_request, selected_items):
+	"""Reject a repeated partial transfer or a dialog made stale by another transfer."""
+	items_by_name = {item.name: item for item in material_request.items}
+	for row in selected_items:
+		item = items_by_name.get(row.get("material_request_item"))
+		expected_qty = row.get("expected_ordered_qty")
+		if expected_qty is None:
+			frappe.throw(_("Refresh Quick Transfer before transferring items."))
+		try:
+			expected_qty = float(expected_qty)
+		except TypeError, ValueError:
+			frappe.throw(_("Invalid completed quantity. Refresh Quick Transfer."))
+		if not math.isfinite(expected_qty) or not item or abs(flt(item.ordered_qty) - expected_qty) > 1e-9:
+			frappe.throw(_("This request has already been transferred or changed. Refresh Quick Transfer."))
 
 
 def _apply_selection(stock_entry, selected: dict[str, float]):
@@ -185,15 +221,18 @@ def _apply_selection(stock_entry, selected: dict[str, float]):
 	stock_entry.set_transfer_qty()
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def execute_quick_transfer(material_request: str, selected_items):
 	"""Map, filter, submit, and return a standard ERPNext Stock Entry."""
 	_check_stock_entry_permissions()
+	if isinstance(selected_items, str):
+		selected_items = json.loads(selected_items)
 	selected = _parse_selected_items(selected_items)
 
 	# Lock the MR and its child rows until this request commits. This serializes
 	# concurrent quick transfers and makes the mapper see the latest completed qty.
 	doc = _get_material_request(material_request, for_update=True)
+	_validate_snapshot(doc, selected_items)
 	_validate_selection(doc, selected)
 
 	stock_entry = make_stock_entry(doc.name)

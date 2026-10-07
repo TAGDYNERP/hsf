@@ -33,7 +33,7 @@ const hsf_quick_transfer = {
 			frm.doc.docstatus === 1 &&
 			frm.doc.material_request_type === "Material Transfer" &&
 			!["Stopped", "Cancelled"].includes(frm.doc.status) &&
-			flt(frm.doc.per_ordered) < 100 &&
+			(frm.doc.items || []).some((row) => flt(row.stock_qty) > flt(row.ordered_qty)) &&
 			frappe.model.can_create("Stock Entry") &&
 			frappe.perm.has_perm("Stock Entry", 0, "submit")
 		);
@@ -158,16 +158,22 @@ const hsf_quick_transfer = {
 						},
 						{ fieldname: "material_request_item", fieldtype: "Data", hidden: 1 },
 						{ fieldname: "can_quick_transfer", fieldtype: "Check", hidden: 1 },
+						{ fieldname: "expected_ordered_qty", fieldtype: "Float", hidden: 1 },
+						{ fieldname: "conversion_factor", fieldtype: "Float", hidden: 1 },
+						{ fieldname: "whole_uom", fieldtype: "Check", hidden: 1 },
+						{ fieldname: "whole_stock_uom", fieldtype: "Check", hidden: 1 },
 					],
 				},
 			],
 			primary_action_label: __("Transfer"),
 			primary_action: async (values) => {
+				if (dialog.transferring) return;
 				const selected_items = (values.items || [])
 					.filter((row) => row.include && flt(row.transfer_qty) > 0)
 					.map((row) => ({
 						material_request_item: row.material_request_item,
 						transfer_qty: flt(row.transfer_qty),
+						expected_ordered_qty: row.expected_ordered_qty,
 					}));
 
 				if (!selected_items.length) {
@@ -177,6 +183,7 @@ const hsf_quick_transfer = {
 					return;
 				}
 
+				dialog.transferring = true;
 				dialog.disable_primary_action();
 				try {
 					const transfer = await frappe.call({
@@ -198,17 +205,29 @@ const hsf_quick_transfer = {
 						]),
 					});
 				} finally {
+					dialog.transferring = false;
 					dialog.enable_primary_action();
 				}
 			},
 			secondary_action_label: __("Transfer All Available"),
 			secondary_action: () => {
 				const grid = dialog.fields_dict.items.grid;
+				const stock_remaining = new Map();
 				grid.data.forEach((row) => {
+					const key = JSON.stringify([row.item_code, row.source_warehouse]);
+					const factor = flt(row.conversion_factor) || 1;
+					if (!stock_remaining.has(key)) {
+						stock_remaining.set(key, Math.max(flt(row.available_qty), 0) * factor);
+					}
 					row.include = row.can_quick_transfer ? 1 : 0;
 					row.transfer_qty = row.can_quick_transfer
-						? Math.min(flt(row.remaining_qty), Math.max(flt(row.available_qty), 0))
+						? Math.min(flt(row.remaining_qty), stock_remaining.get(key) / factor)
 						: 0;
+					if (row.whole_stock_uom) {
+						row.transfer_qty = Math.floor(row.transfer_qty * factor + 1e-9) / factor;
+					}
+					if (row.whole_uom) row.transfer_qty = Math.floor(row.transfer_qty + 1e-9);
+					stock_remaining.set(key, stock_remaining.get(key) - row.transfer_qty * factor);
 				});
 				grid.refresh();
 			},

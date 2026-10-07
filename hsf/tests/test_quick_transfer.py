@@ -197,7 +197,7 @@ class TestSelectionAndExecution(TestCase):
 		mapper.return_value = stock_entry
 
 		result = api.execute_quick_transfer(
-			"MR-TEST", [{"material_request_item": "ROW-A", "transfer_qty": 6}]
+			"MR-TEST", [{"material_request_item": "ROW-A", "transfer_qty": 6, "expected_ordered_qty": 0}]
 		)
 
 		get_mr.assert_called_once_with("MR-TEST", for_update=True)
@@ -228,3 +228,133 @@ class TestSelectionAndExecution(TestCase):
 	def test_non_finite_quantity_is_rejected(self):
 		with self.assertRaises(frappe.ValidationError):
 			api._parse_selected_items([{"material_request_item": "ROW-A", "transfer_qty": float("nan")}])
+
+	def test_repeated_partial_transfer_is_rejected(self):
+		doc = material_request([item("ROW-A", "ITEM-A", ordered_qty=4)])
+		with self.assertRaises(frappe.ValidationError):
+			api._validate_snapshot(doc, [{"material_request_item": "ROW-A", "expected_ordered_qty": 0}])
+
+	@patch.object(api, "_item_flags")
+	@patch.object(api, "_availability", return_value=6)
+	def test_shared_source_stock_is_not_allocated_twice(self, availability, flags):
+		flags.return_value = frappe._dict(has_serial_no=0, has_batch_no=0, is_stock_item=1)
+		doc = material_request([item("ROW-A", "ITEM-A", qty=4, stock_qty=4), item("ROW-B", "ITEM-A")])
+		rows = api._get_outstanding_rows(doc)
+		self.assertEqual([row.transfer_qty for row in rows], [4, 2])
+		with self.assertRaises(frappe.ValidationError):
+			api._validate_selection(doc, {"ROW-A": 4, "ROW-B": 4})
+
+
+class TestQuickTransferTransactions(TestCase):
+	"""Exercise real ERPNext documents, rolling back all test records afterward."""
+
+	def setUp(self):
+		self.original_user = frappe.session.user
+		frappe.set_user("Administrator")
+		frappe.db.savepoint("hsf_quick_transfer_test")
+		self.addCleanup(self.cleanup_records)
+		self.company = frappe.db.get_value("Company", {}, "name")
+		if not self.company:
+			self.skipTest("A configured company is required for stock transaction tests")
+		self.prefix = "HSF-QT-" + frappe.generate_hash(length=10)
+		self.source = (
+			frappe.get_doc(
+				{"doctype": "Warehouse", "warehouse_name": self.prefix + " Source", "company": self.company}
+			)
+			.insert()
+			.name
+		)
+		self.target = (
+			frappe.get_doc(
+				{"doctype": "Warehouse", "warehouse_name": self.prefix + " Target", "company": self.company}
+			)
+			.insert()
+			.name
+		)
+		self.item_code = (
+			frappe.get_doc(
+				{
+					"doctype": "Item",
+					"item_code": self.prefix,
+					"item_name": self.prefix,
+					"item_group": "All Item Groups",
+					"stock_uom": "Nos",
+					"is_stock_item": 1,
+				}
+			)
+			.insert()
+			.name
+		)
+		receipt = frappe.get_doc(
+			{
+				"doctype": "Stock Entry",
+				"company": self.company,
+				"stock_entry_type": "Material Receipt",
+				"items": [
+					{"item_code": self.item_code, "qty": 20, "t_warehouse": self.source, "basic_rate": 10}
+				],
+			}
+		).insert()
+		receipt.submit()
+
+	def cleanup_records(self):
+		frappe.db.rollback(save_point="hsf_quick_transfer_test")
+		frappe.set_user(self.original_user)
+
+	def make_request(self):
+		return (
+			frappe.get_doc(
+				{
+					"doctype": "Material Request",
+					"company": self.company,
+					"material_request_type": "Material Transfer",
+					"schedule_date": frappe.utils.today(),
+					"items": [
+						{
+							"item_code": self.item_code,
+							"qty": 10,
+							"from_warehouse": self.source,
+							"warehouse": self.target,
+						}
+					],
+				}
+			)
+			.insert()
+			.submit()
+		)
+
+	def test_partial_transfer_retry_and_standard_completion(self):
+		mr = self.make_request()
+		row = api.get_quick_transfer_items(mr.name)["items"][0]
+		selection = [
+			{"material_request_item": row.material_request_item, "transfer_qty": 4, "expected_ordered_qty": 0}
+		]
+		result = api.execute_quick_transfer(mr.name, selection)
+		entry = frappe.get_doc("Stock Entry", result["stock_entry"])
+		self.assertEqual(entry.docstatus, 1)
+		self.assertEqual(entry.items[0].material_request, mr.name)
+		self.assertEqual(entry.items[0].material_request_item, mr.items[0].name)
+		self.assertEqual(entry.items[0].s_warehouse, self.source)
+		self.assertEqual(entry.items[0].t_warehouse, self.target)
+		mr.reload()
+		self.assertEqual(mr.items[0].ordered_qty, 4)
+		self.assertEqual(len(mr.items), 1)
+		with self.assertRaises(frappe.ValidationError):
+			api.execute_quick_transfer(mr.name, selection)
+		standard_entry = api.make_stock_entry(mr.name)
+		self.assertEqual(standard_entry.items[0].qty, 6)
+		standard_entry.insert().submit()
+		mr.reload()
+		self.assertEqual(mr.items[0].ordered_qty, 10)
+		self.assertEqual(mr.per_ordered, 100)
+		self.assertEqual(api.get_quick_transfer_items(mr.name)["items"], [])
+
+	def test_standard_stop_is_respected(self):
+		from erpnext.stock.doctype.material_request.material_request import update_status
+
+		mr = self.make_request()
+		update_status(mr.name, "Stopped")
+		mr.reload()
+		self.assertEqual(mr.status, "Stopped")
+		with self.assertRaises(frappe.ValidationError):
+			api.get_quick_transfer_items(mr.name)
